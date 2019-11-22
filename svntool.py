@@ -112,7 +112,7 @@ class Repo:
         
         if branch != 'trunk':
             if not self.branchExists(branch):
-                sys.stderr.write("'%s' branch '%s' does not exist, skipping\n" % (self, branch))
+                sys.stderr.write("%s branch '%s' does not exist, skipping\n" % (self, branch))
                 return -1
             branch_url = self.makeUrl(['branches', branch])
         else:
@@ -136,10 +136,10 @@ class Repo:
 
     def createBranchFromTrunk(self, name):
         if self.branchExists(name):
-            print("'%s' branch '%s' exists" % (self, name))
+            print("%s branch '%s' exists" % (self, name))
             return
 
-        print("'%s' creating branch '%s' from trunk" % (self, name))
+        print("%s creating branch '%s' from trunk" % (self, name))
         trunk_url = self.makeUrl(['trunk'])
         branch_url = self.makeUrl(['branches', name])
         commitmsg = '-m"Creating branch \'%s\' from trunk."' % name
@@ -150,14 +150,14 @@ class Repo:
 
     def createBranchFromBranch(self, source, target):
         if not self.branchExists(source):
-            print("'%s' source branch '%s' does not exist" % (self, source))
+            print("%s source branch '%s' does not exist" % (self, source))
             return
 
         if self.branchExists(target):
-            print("'%s' branch '%s' exists" % (self, target))
+            print("%s branch '%s' exists" % (self, target))
             return
 
-        print("'%s' creating branch '%s' from branch '%s'" % (self, target, source))
+        print("%s creating branch '%s' from branch '%s'" % (self, target, source))
         source_url = self.makeUrl(['branches', source])
         target_url = self.makeUrl(['branches', target])
         commitmsg = '-m"Creating branch \'%s\' from branch \'%s\'."' % (target, source)
@@ -168,12 +168,12 @@ class Repo:
 
     def checkoutBranch(self, name):
         if self.currentBranch == name:
-            sys.stderr.write("'%s' already on branch '%s'\n" % (self, name))
+            sys.stderr.write("%s already on branch '%s'\n" % (self, name))
             return
 
         if name != 'trunk':
             if not self.branchExists(name):
-                sys.stderr.write("'%s' branch '%s' does not exist, skipping\n" % (self, name))
+                sys.stderr.write("%s branch '%s' does not exist, skipping\n" % (self, name))
                 return 
             branch_url = self.makeUrl(['branches', name])
         else:
@@ -187,22 +187,22 @@ class Repo:
 
     def deleteBranch(self, name, archive=False):
         if not self.branchExists(name):
-            sys.stderr.write("'%s' branch '%s' does not exist\n" % (self, name))
+            sys.stderr.write("%s branch '%s' does not exist\n" % (self, name))
             return
         
         if self.currentPath.endswith(name):
-            sys.stderr.write("'%s' is currently on branch '%s', cannot delete\n" % (self, name))
+            sys.stderr.write("%s is currently on branch '%s', cannot delete\n" % (self, name))
             return
 
         branch_url = self.makeUrl(['branches', name])
         
         try:
             if not archive:
-                print("'%s' deleting branch '%s'" % (self, name))
+                print("%s deleting branch '%s'" % (self, name))
                 commitmsg = '-m"Deleting branch \'%s\'"' % name
                 self._exec('svn', 'rm', branch_url, commitmsg)
             else:
-                print("'%s' archiving branch '%s'" % (self, name))
+                print("%s archiving branch '%s'" % (self, name))
                 commitmsg = '-m"Archiving branch \'%s\'"' % name
                 archive_url = self.makeUrl(['branches', name + '.closed'])
                 self._exec('svn', 'rename', branch_url, archive_url, commitmsg)
@@ -212,7 +212,7 @@ class Repo:
     def diffBranch(self, old, new=None, fd=sys.stdout):
         if old != 'trunk':
             if not self.branchExists(old):
-                sys.stderr.write("'%s' branch '%s' does not exist, skipping\n" % (self, old))
+                sys.stderr.write("%s branch '%s' does not exist, skipping\n" % (self, old))
                 return
             old_url = self.makeUrl(['branches', old])
         else:
@@ -223,14 +223,14 @@ class Repo:
 
         if new != 'trunk':
             if not self.branchExists(new):
-                sys.stderr.write("'%s' branch '%s' does not exist, skipping\n" % (self, new))
+                sys.stderr.write("%s branch '%s' does not exist, skipping\n" % (self, new))
                 return
             new_url = self.makeUrl(['branches', new])
         else:
             new_url = self.makeUrl(['trunk'])
 
         if old == new:
-            sys.stderr.write("'%s' can not diff '%s' against '%s'\n" % (self, new, old))
+            sys.stderr.write("%s can not diff '%s' against '%s'\n" % (self, new, old))
             return
 
         try:
@@ -247,7 +247,7 @@ class Repo:
         cmd.append(self.local_path)
 
         try:
-            sys.stdout.write("'%s' updating... " % self)
+            sys.stdout.write("%s updating... " % self)
             sys.stdout.flush()
             self._exec(*cmd)
             self._updateInfo()
@@ -255,15 +255,21 @@ class Repo:
         except subprocess.CalledProcessError as e:
             self._printError(e)
 
-    def commit(self, message):
-        changes = self.pendingChanges(mask=SVN_COMMIT_MASK)
-        if len(changes) == 0:
-            print("'%s' no pending changes, skipping." % self)
-            return
-        paths = [ c.name for c in changes ]
+    def commit(self, message, merge=False):
+        if not merge:
+            changes = self.pendingChanges(mask=SVN_COMMIT_MASK)
+            sys.stdout.write("%s committing %d changes... " % (self, len(changes)))
+            sys.stdout.flush()
 
-        sys.stdout.write("'%s' committing %d changes... " % (self, len(changes)))
-        sys.stdout.flush()
+            if len(changes) == 0:
+                print("'%s' no pending changes, skipping." % self)
+                return
+            paths = [ c.name for c in changes ]
+        else:
+            sys.stdout.write("%s committing merge... " % self)
+            sys.stdout.flush()
+            paths = [ self.local_path ]
+
         try:
             self._exec('svn', 'commit', *paths, '-m', '"%s"' % message)
             self.client.update()
@@ -274,11 +280,11 @@ class Repo:
 
     def merge(self, branch, dryrun=False, revision=None):
         if branch == self.currentBranch:
-            sys.stderr.write("'%s' can not merge branch '%s' with itself\n" % (self, branch))
+            sys.stderr.write("%s can not merge branch '%s' with itself\n" % (self, branch))
             return
         elif branch != 'trunk':
             if not self.branchExists(branch):
-                sys.stderr.write("'%s' branch '%s' does not exist, skipping\n" % (self, branch))
+                sys.stderr.write("%s branch '%s' does not exist, skipping\n" % (self, branch))
                 return
             branch_url = self.makeUrl(['branches', branch])
         else:
@@ -292,7 +298,7 @@ class Repo:
         cmd.extend([branch_url, self.local_path])
 
         try:
-            print("'%s' merging changes from from '%s' into '%s'" % (self, branch, self.currentBranch))
+            print("%s merging changes from from '%s' into '%s'" % (self, branch, self.currentBranch))
             for line in self._exec(*cmd):
                 print("  ", line)
         except subprocess.CalledProcessError as e:
@@ -338,7 +344,7 @@ class Repo:
             fd.write(line + '\n')
 
     def revert(self):
-        sys.stdout.write("'%s' reverting changes... " % self)
+        sys.stdout.write("%s reverting changes... " % self)
         sys.stdout.flush()
         try:
             self._exec('svn', 'revert', '--recursive', self.local_path)
@@ -463,11 +469,12 @@ class Branch:
 class Commit:
     def run(self, repos, args):
         parser = argparse.ArgumentParser('svntool commit')
+        parser.add_argument('--merge', action='store_true', help="Use this flag when commiting a merge")
         parser.add_argument('--message', '-m', required=True, help="Commit message")
         subargs = parser.parse_args(args)
 
         for repo in repos:
-            repo.commit(subargs.message)
+            repo.commit(subargs.message, subargs.merge)
 
 class Status:
     def run(self, repos, args):
