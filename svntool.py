@@ -570,7 +570,7 @@ class Svntool:
         parser.add_argument('config', 
             help="Path to configuration file which contains line by line the repositories to act on.")
         parser.add_argument('--repo', '-r', required=False, default=None,
-            help="Explicit single repository to act up on instead of all the entries in the configuration file.")
+            help="Regex for selecting a subset of repositories to act up on instead of all the entries in the configuration file.")
         parser.add_argument('command', metavar="command", choices=self.commands.keys(),
             help="Command to execute: " + ", ".join(self.commands.keys()))
         parser.add_argument('args', nargs=argparse.REMAINDER,
@@ -584,7 +584,8 @@ class Svntool:
             sys.exit(1)
 
         if args.repo:
-            repos = [ r for r in repos if str(r).endswith(args.repo) ]
+            regex = re.compile(args.repo)
+            repos = [ r for r in repos if regex.search(r.local_path) ]
             if not len(repos):
                 sys.stderr.write("Unknown repository: " + args.repo + "\n")
                 sys.exit(1)
