@@ -352,6 +352,19 @@ class Repo:
         except subprocess.CalledProcessError as e:
             self._printError(e)
 
+    def clean(self, ignored=False):
+        sys.stdout.write("%s cleaning up... " % self)
+        sys.stdout.flush()
+        try:
+            cmd = ['svn', 'cleanup', '--remove-unversioned']
+            if ignored:
+                cmd.append('--remove-ignored')
+            cmd.append(self.local_path)
+            self._exec(*cmd)
+            sys.stdout.write('done\n')
+        except subprocess.CalledProcessError as e:
+            self._printError(e)
+
     def status(self):
         sys.stdout.write("%-50s %s" % (self,
             colored("#%6s" % self.revision, 'yellow')))
@@ -478,6 +491,8 @@ class Commit:
 
 class Status:
     def run(self, repos, args):
+        parser = argparse.ArgumentParser('svntool status')
+        parser.parse_args(args)
         for repo in repos:
             repo.status()
 
@@ -538,18 +553,36 @@ class Log:
 
 class Diff:
     def run(self, repos, args):
+        parser = argparse.ArgumentParser('svntool diff',
+            description="Generate unified diff of all uncomitted modifications.")
+        parser.parse_args(args)
+
         for repo in repos:
             repo.diff()
 
 class Revert:
     def run(self, repos, args):
+        parser = argparse.ArgumentParser('svntool revert',
+            description="Revert all uncomitted modifictions.")
+        parser.parse_args(args)
         for repo in repos:
             repo.revert()
+
+class Clean:
+    def run(self, repos, args):
+        parser = argparse.ArgumentParser('svntool clean',
+            description="Remove unversioned files from the checkout.")
+        parser.add_argument('--ignored', '-i', action='store_true', default=False,
+            help="Also remove files marked as ignorged.")
+        subargs = parser.parse_args(args)
+        for repo in repos:
+            repo.clean(ignored=subargs.ignored)
 
 class Svntool:
     def __init__(self):
         self.commands = {
             'branch': Branch,
+            'clean': Clean,
             'commit': Commit,
             'diff': Diff,
             'log': Log,
